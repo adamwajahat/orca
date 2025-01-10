@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Grid, Paper, Typography, CircularProgress } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { Box, Container, Grid, Paper, Typography, CircularProgress, useTheme } from '@mui/material';
+import { styled, keyframes } from '@mui/material/styles';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -14,17 +14,51 @@ import ErrorAlert from '../components/ErrorAlert';
 // Register only the chart components we need
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+// Animations
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const pulseAnimation = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+`;
+
+// Styled components
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(4),
   height: '100%',
   display: 'flex',
   flexDirection: 'column',
+  borderRadius: theme.shape.borderRadius * 2,
+  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+  transition: 'all 0.3s ease-in-out',
+  '&:hover': {
+    transform: 'translateY(-5px)',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+  },
+  animation: `${fadeIn} 0.6s ease-out`,
 }));
 
 const MetricValue = styled(Typography)(({ theme }) => ({
-  fontSize: '2rem',
+  fontSize: '2.5rem',
   fontWeight: 'bold',
-  color: theme.palette.primary.main,
+  color: theme.palette.secondary.main,
+  marginTop: theme.spacing(1),
+  marginBottom: theme.spacing(2),
+}));
+
+const MetricLabel = styled(Typography)(({ theme }) => ({
+  fontSize: '1rem',
+  color: theme.palette.text.secondary,
+  marginBottom: theme.spacing(1),
+}));
+
+const ChartContainer = styled(Box)(({ theme }) => ({
+  height: 250,
+  marginTop: theme.spacing(2),
 }));
 
 const AnalyticsPage = () => {
@@ -34,6 +68,7 @@ const AnalyticsPage = () => {
   const [environmentalData, setEnvironmentalData] = useState(null);
   const [loading, setLoading] = useState(true);
   const { fetchData, error, loading: apiLoading, setError } = useApi();
+  const theme = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,7 +99,7 @@ const AnalyticsPage = () => {
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
+        <CircularProgress size={60} thickness={4} color="secondary" />
       </Box>
     );
   }
@@ -79,16 +114,16 @@ const AnalyticsPage = () => {
         cumulativeData?.organic || 0,
       ],
       backgroundColor: [
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 99, 132, 0.8)',
-        'rgba(75, 192, 192, 0.8)',
+        theme.palette.primary.light,
+        theme.palette.secondary.light,
+        theme.palette.success.light,
       ],
       borderColor: [
-        'rgba(54, 162, 235, 1)',
-        'rgba(255, 99, 132, 1)',
-        'rgba(75, 192, 192, 1)',
+        theme.palette.primary.main,
+        theme.palette.secondary.main,
+        theme.palette.success.main,
       ],
-      borderWidth: 1,
+      borderWidth: 2,
     }],
   };
 
@@ -98,31 +133,47 @@ const AnalyticsPage = () => {
     plugins: {
       legend: {
         position: 'bottom',
+        labels: {
+          font: {
+            size: 14,
+          },
+        },
       },
     },
   };
 
   return (
-    <>
+    <Box sx={{
+      background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 100%)`,
+      minHeight: '100vh',
+      pt: 4,
+      pb: 8,
+    }}>
       <ErrorAlert error={error} onClose={() => setError(null)} />
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Container maxWidth="lg">
+        <Typography variant="h3" component="h1" gutterBottom sx={{ 
+          fontWeight: 'bold', 
+          color: theme.palette.primary.main,
+          textAlign: 'center',
+          mb: 6,
+          animation: `${fadeIn} 0.8s ease-out`,
+        }}>
           Analytics Dashboard
         </Typography>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={4}>
           {/* Real-Time Status */}
           <Grid item xs={12} md={6}>
             <StyledPaper>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>
                 Real-Time Status
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">Current Status</Typography>
+              <Box sx={{ mb: 3 }}>
+                <MetricLabel>Current Status</MetricLabel>
                 <MetricValue>{realTimeData?.robot_status || 'N/A'}</MetricValue>
               </Box>
               <Box>
-                <Typography variant="subtitle1">Recent Collection</Typography>
+                <MetricLabel>Recent Collection</MetricLabel>
                 <MetricValue>{realTimeData?.trash_collected || 0} kg</MetricValue>
               </Box>
             </StyledPaper>
@@ -131,31 +182,31 @@ const AnalyticsPage = () => {
           {/* Cumulative Data */}
           <Grid item xs={12} md={6}>
             <StyledPaper>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>
                 Total Collection
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">Total Trash Collected</Typography>
+              <Box sx={{ mb: 3 }}>
+                <MetricLabel>Total Trash Collected</MetricLabel>
                 <MetricValue>{cumulativeData?.total_trash_collected || 0} kg</MetricValue>
               </Box>
-              <Box sx={{ height: 200 }}>
+              <ChartContainer>
                 <Pie data={trashTypeData} options={chartOptions} />
-              </Box>
+              </ChartContainer>
             </StyledPaper>
           </Grid>
 
           {/* Performance Metrics */}
           <Grid item xs={12} md={6}>
             <StyledPaper>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>
                 Performance Metrics
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">Efficiency Rate</Typography>
+              <Box sx={{ mb: 3 }}>
+                <MetricLabel>Efficiency Rate</MetricLabel>
                 <MetricValue>{performanceData?.efficiency || 0} kg/hour</MetricValue>
               </Box>
               <Box>
-                <Typography variant="subtitle1">Operational Time</Typography>
+                <MetricLabel>Operational Time</MetricLabel>
                 <MetricValue>{Math.round((performanceData?.operational_time || 0) / 60)} hours</MetricValue>
               </Box>
             </StyledPaper>
@@ -164,23 +215,24 @@ const AnalyticsPage = () => {
           {/* Environmental Impact */}
           <Grid item xs={12} md={6}>
             <StyledPaper>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h5" gutterBottom sx={{ color: theme.palette.primary.main, fontWeight: 'bold' }}>
                 Environmental Impact
               </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">Pollution Reduction</Typography>
+              <Box sx={{ mb: 3 }}>
+                <MetricLabel>Pollution Reduction</MetricLabel>
                 <MetricValue>{environmentalData?.pollution_reduction || 0} kg</MetricValue>
               </Box>
               <Box>
-                <Typography variant="subtitle1">Carbon Offset</Typography>
+                <MetricLabel>Carbon Offset</MetricLabel>
                 <MetricValue>{environmentalData?.carbon_offset || 0} kg CO₂</MetricValue>
               </Box>
             </StyledPaper>
           </Grid>
         </Grid>
       </Container>
-    </>
+    </Box>
   );
 };
 
-export default AnalyticsPage; 
+export default AnalyticsPage;
+
